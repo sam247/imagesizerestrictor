@@ -8,7 +8,7 @@ import {
   Button,
   Banner,
   Text,
-  Range
+  Select
 } from "@shopify/polaris";
 import { useAuthenticatedFetch } from "../hooks";
 
@@ -99,15 +99,18 @@ export default function SettingsPage() {
                 helpText="Minimum required width or height in pixels"
               />
 
-              <Range
+              <Select
                 label="Compression Quality"
-                value={settings.compressionQuality}
+                options={[
+                  {label: 'Low (60%)', value: '60'},
+                  {label: 'Medium (75%)', value: '75'},
+                  {label: 'High (85%)', value: '85'},
+                  {label: 'Maximum (100%)', value: '100'}
+                ]}
+                value={settings.compressionQuality.toString()}
                 onChange={(value) =>
-                  setSettings({ ...settings, compressionQuality: value })
+                  setSettings({ ...settings, compressionQuality: parseInt(value, 10) })
                 }
-                min={0}
-                max={100}
-                output
                 helpText="JPEG compression quality (higher = better quality but larger file size)"
               />
 
