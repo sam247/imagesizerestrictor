@@ -24,6 +24,10 @@ const STATIC_PATH =
     ? `${process.cwd()}/frontend/dist`
     : `${process.cwd()}/frontend/`;
 
+logger.info(`Static path: ${STATIC_PATH}`);
+logger.info(`Current working directory: ${process.cwd()}`);
+logger.info(`NODE_ENV: ${process.env.NODE_ENV}`);
+
 const app = express();
 
 // Set up Shopify authentication and webhook handling
@@ -51,7 +55,12 @@ app.post(
 // If you are adding routes outside of the /api path, remember to
 // also add a proxy rule for them in web/frontend/vite.config.js
 
-app.use("/api/*", shopify.validateAuthenticatedSession());
+// Add session validation logging
+app.use("/api/*", (req, res, next) => {
+  logger.info(`Validating session for: ${req.url}`);
+  logger.info(`Session: ${JSON.stringify(req.session, null, 2)}`);
+  return shopify.validateAuthenticatedSession()(req, res, next);
+});
 
 app.use(express.json());
 
@@ -134,8 +143,11 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use("/*", shopify.ensureInstalledOnShop(), async (req, res, _next) => {
-  logger.info(`Catch-all route hit: ${req.url}`);
+app.use("/*", (req, res, next) => {
+  logger.info(`Pre-ensureInstalledOnShop: ${req.url}`);
+  return shopify.ensureInstalledOnShop()(req, res, next);
+}, async (req, res, _next) => {
+  logger.info(`Serving frontend for: ${req.url}`);
   return res
     .status(200)
     .set("Content-Type", "text/html")

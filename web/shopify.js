@@ -3,7 +3,10 @@ import { shopifyApp } from "@shopify/shopify-app-express";
 import { SQLiteSessionStorage } from "@shopify/shopify-app-session-storage-sqlite";
 import { restResources } from "@shopify/shopify-api/rest/admin/2025-07";
 
+import { logger } from "./utils/logger.js";
+
 const DB_PATH = `${process.cwd()}/database.sqlite`;
+logger.info(`SQLite DB Path: ${DB_PATH}`);
 
 // The transactions with Shopify will always be marked as test transactions, unless NODE_ENV is production.
 // See the ensureBilling helper to learn more about billing in this template.
