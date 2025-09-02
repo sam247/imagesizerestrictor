@@ -1,5 +1,9 @@
 import { Navigation } from "@shopify/polaris";
-import { HomeIcon, SettingsIcon, AnalyticsIcon } from "@shopify/polaris-icons";
+import {
+  HomeMajor,
+  SettingsMajor,
+  AnalyticsMajor
+} from "@shopify/polaris-icons";
 import { useLocation, useNavigate } from "react-router-dom";
 
 export function AppNavigation() {
@@ -9,19 +13,19 @@ export function AppNavigation() {
   const navigationItems = [
     {
       label: "Dashboard",
-      icon: HomeIcon,
+      icon: HomeMajor,
       url: "/",
       selected: location.pathname === "/"
     },
     {
       label: "Analytics",
-      icon: AnalyticsIcon,
+      icon: AnalyticsMajor,
       url: "/analytics",
       selected: location.pathname === "/analytics"
     },
     {
       label: "Settings",
-      icon: SettingsIcon,
+      icon: SettingsMajor,
       url: "/settings",
       selected: location.pathname === "/settings"
     }
