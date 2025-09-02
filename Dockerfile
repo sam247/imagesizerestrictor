@@ -1,9 +1,13 @@
 # Use the official Node.js 20 image
 FROM node:20.10.0-alpine
 
+# Set build arguments
+ARG SHOPIFY_API_KEY
+
 # Set environment variables
 ENV NODE_ENV=production
 ENV PORT=8081
+ENV SHOPIFY_API_KEY=$SHOPIFY_API_KEY
 
 # Create app directory
 WORKDIR /app
@@ -14,9 +18,9 @@ COPY web/package*.json ./web/
 COPY web/frontend/package*.json ./web/frontend/
 
 # Install dependencies
-RUN npm install
-RUN cd web && npm install
-RUN cd frontend && npm install
+RUN npm install --no-audit
+RUN cd web && npm install --no-audit
+RUN cd web/frontend && npm install --no-audit
 
 # Copy the rest of the application
 COPY . .
