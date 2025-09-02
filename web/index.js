@@ -30,6 +30,9 @@ logger.info(`NODE_ENV: ${process.env.NODE_ENV}`);
 
 const app = express();
 
+// Enable query string parsing
+app.use(express.urlencoded({ extended: true }));
+
 // Set up Shopify authentication and webhook handling
 app.get(shopify.config.auth.path, (req, res, next) => {
   logger.info(`Auth begin: ${req.url}`);
@@ -40,6 +43,14 @@ app.get(
   shopify.config.auth.callbackPath,
   (req, res, next) => {
     logger.info(`Auth callback: ${req.url}`);
+    // Ensure shop parameter is available
+    if (!req.query.shop && req.url.includes('shop=')) {
+      const shopMatch = req.url.match(/shop=([^&]+)/);
+      if (shopMatch) {
+        req.query.shop = decodeURIComponent(shopMatch[1]);
+        logger.info(`Extracted shop in callback: ${req.query.shop}`);
+      }
+    }
     return shopify.auth.callback()(req, res, next);
   },
   (req, res, next) => {
@@ -144,7 +155,15 @@ app.use((req, res, next) => {
 });
 
 app.use("/*", (req, res, next) => {
-  logger.info(`Pre-ensureInstalledOnShop: ${req.url}`);
+  // Extract shop from query parameters if not already present
+  if (!req.query.shop && req.url.includes('shop=')) {
+    const shopMatch = req.url.match(/shop=([^&]+)/);
+    if (shopMatch) {
+      req.query.shop = decodeURIComponent(shopMatch[1]);
+      logger.info(`Extracted shop from URL: ${req.query.shop}`);
+    }
+  }
+  logger.info(`Pre-ensureInstalledOnShop: ${req.url}, Shop: ${req.query.shop}`);
   return shopify.ensureInstalledOnShop()(req, res, next);
 }, async (req, res, _next) => {
   logger.info(`Serving frontend for: ${req.url}`);
