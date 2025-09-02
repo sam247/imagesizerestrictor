@@ -28,6 +28,9 @@ const shopify = shopifyApp({
     isEmbeddedApp: true,
     apiKey: process.env.SHOPIFY_API_KEY,
     scopes: ["write_products", "write_files", "read_files"],
+    logger: {
+      level: 0 // Enable all logging
+    },
     future: {
       customerAddressDefaultFix: true,
       lineItemBilling: true,

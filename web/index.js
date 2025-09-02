@@ -179,64 +179,53 @@ app.use((req, res, next) => {
   next();
 });
 
+// Auth endpoints
+app.get("/api/auth", async (req, res, next) => {
+  logger.info(`Auth begin: ${req.url}`);
+  return shopify.auth.begin()(req, res, next);
+});
+
+app.get("/api/auth/callback", async (req, res, next) => {
+  try {
+    logger.info(`Auth callback: ${req.url}`);
+    await shopify.auth.callback()(req, res, next);
+  } catch (error) {
+    logger.error(`Auth callback error: ${error.message}`);
+    res.status(500).send(error.message);
+  }
+});
+
 // This route will handle both app installation and rendering
 app.use("/*", async (req, res, next) => {
-  const shop = req.query.shop || (req.url.match(/shop=([^&]+)/) || [])[1];
+  const shop = req.query.shop;
   
   if (!shop) {
     logger.info(`No shop found in request: ${req.url}`);
-    return res.status(500).send("No shop provided");
+    return res.status(400).send("No shop provided");
   }
 
   logger.info(`Processing request for shop: ${shop}`);
 
-  // First try to get an offline session
-  const offlineId = await shopify.api.session.getOfflineId(shop);
-  const offlineSession = await shopify.config.sessionStorage.loadSession(offlineId);
-
-  logger.info(`Offline session found: ${!!offlineSession}`);
-
-  if (!offlineSession) {
-    logger.info(`No offline session, starting auth: ${shop}`);
-    return shopify.auth.begin({
-      shop,
-      isOnline: false,
-      callbackPath: "/api/auth/callback",
-    })(req, res, next);
-  }
-
-  // Try to get an online session
   try {
-    const sessionId = await shopify.api.session.getCurrentId({
+    // Check if the shop has installed the app
+    const appInstalled = await shopify.api.session.getCurrentId({
       isOnline: true,
       rawRequest: req,
       rawResponse: res,
     });
 
-    logger.info(`Online session ID: ${sessionId}`);
+    logger.info(`App installed check: ${!!appInstalled}`);
 
-    if (!sessionId) {
-      logger.info(`No online session, using offline session for: ${shop}`);
-      res.locals.shopify = { ...res.locals.shopify, session: offlineSession };
-      return next();
+    if (!appInstalled) {
+      logger.info(`Starting auth for shop: ${shop}`);
+      return shopify.auth.begin()(req, res, next);
     }
 
-    const onlineSession = await shopify.config.sessionStorage.loadSession(sessionId);
-    
-    if (!onlineSession) {
-      logger.info(`Online session not found, using offline session for: ${shop}`);
-      res.locals.shopify = { ...res.locals.shopify, session: offlineSession };
-      return next();
-    }
-
-    logger.info(`Using online session for: ${shop}`);
-    res.locals.shopify = { ...res.locals.shopify, session: onlineSession };
+    logger.info(`App is installed, proceeding to render`);
     return next();
   } catch (error) {
-    logger.error(`Session error: ${error.message}`);
-    logger.info(`Falling back to offline session for: ${shop}`);
-    res.locals.shopify = { ...res.locals.shopify, session: offlineSession };
-    return next();
+    logger.error(`Auth error: ${error.message}`);
+    return shopify.auth.begin()(req, res, next);
   }
 }, async (req, res, _next) => {
   logger.info(`Serving frontend for: ${req.url}`);

@@ -33,9 +33,10 @@ export function AppBridgeProvider({ children }) {
       apiKey: apiKey,
       forceRedirect: true,
       isEmbeddedApp: true,
-      // Add required OAuth configuration
       hostScheme: "https",
-      scopes: ["write_products", "write_files", "read_files"]
+      scopes: ["write_products", "write_files", "read_files"],
+      logger: console,
+      debug: true
     }),
     [currentHost, apiKey]
   );
