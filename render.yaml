@@ -1,9 +1,9 @@
 services:
   - type: web
     name: imagesizerestrictor
-    env: node
-    buildCommand: npm install && cd web/frontend && npm install && cd ../.. && npm run build
-    startCommand: cd web && npm run start
+    env: docker
+    buildCommand: docker build -t imagesizerestrictor .
+    startCommand: docker run -p $PORT:8081 imagesizerestrictor
     envVars:
       - key: NODE_ENV
         value: production
@@ -17,3 +17,5 @@ services:
         value: "https://imagesizerestrictor.onrender.com"
       - key: SHOPIFY_APP_URL
         value: "https://imagesizerestrictor.onrender.com"
+      - key: PORT
+        value: "8081"

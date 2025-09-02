@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Provider } from "@shopify/app-bridge-react";
+import { AppBridgeProvider as ShopifyBridgeProvider } from "@shopify/app-bridge-react";
 import { Banner, Layout, Page } from "@shopify/polaris";
 import { logger } from "../../utils/logger.js";
 
@@ -25,14 +25,6 @@ export function AppBridgeProvider({ children }) {
   // For local development, we grab the host from the environment
   const devHost = process.env.NODE_ENV === "development" ? process.env.HOST : null;
   const currentHost = host || devHost;
-
-  // Redirect to Shopify admin if we're not embedded and there's no host
-  useMemo(() => {
-    if (!currentHost && !window.navigator.userAgent.match(/Shopify Mobile/i)) {
-      const shopifyUrl = `https://admin.shopify.com/store`;
-      window.location.href = shopifyUrl;
-    }
-  }, [currentHost]);
 
   const config = useMemo(
     () => ({
@@ -77,8 +69,8 @@ export function AppBridgeProvider({ children }) {
   }
 
   return (
-    <Provider config={config}>
+    <ShopifyBridgeProvider config={config}>
       {children}
-    </Provider>
+    </ShopifyBridgeProvider>
   );
 }
