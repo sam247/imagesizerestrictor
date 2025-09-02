@@ -2,6 +2,7 @@
 import { join } from "path";
 import { readFileSync } from "fs";
 import express from "express";
+import crypto from "crypto";
 import serveStatic from "serve-static";
 
 import shopify from "./shopify.js";
@@ -97,6 +98,12 @@ app.post("/api/products", async (_req, res) => {
 app.use(shopify.cspHeaders());
 app.use(serveStatic(STATIC_PATH, { index: false }));
 
+// Add request ID middleware
+app.use((req, res, next) => {
+  req.id = crypto.randomUUID();
+  next();
+});
+
 app.use("/*", shopify.ensureInstalledOnShop(), async (_req, res, _next) => {
   return res
     .status(200)
@@ -108,4 +115,10 @@ app.use("/*", shopify.ensureInstalledOnShop(), async (_req, res, _next) => {
     );
 });
 
-app.listen(PORT);
+// Error handling middleware should be last
+import { errorHandler } from "./middleware/errorHandler.js";
+app.use(errorHandler);
+
+app.listen(PORT, () => {
+  logger.info(`Server running on port ${PORT}`);
+});
