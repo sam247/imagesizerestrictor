@@ -53,6 +53,10 @@ export default defineConfig({
   resolve: {
     preserveSymlinks: true,
   },
+  define: {
+    'process.env.SHOPIFY_API_KEY': JSON.stringify(process.env.SHOPIFY_API_KEY),
+    'process.env.HOST': JSON.stringify(process.env.HOST),
+  },
   server: {
     host: "localhost",
     port: process.env.FRONTEND_PORT,
