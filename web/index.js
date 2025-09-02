@@ -52,17 +52,23 @@ app.get("/api/auth/callback", async (req, res, next) => {
   logger.info(`Auth callback: ${req.url}`);
   
   try {
-    // Complete auth process
-    await shopify.auth.callback()(req, res, next);
+    const callbackResponse = await shopify.auth.callback({
+      rawRequest: req,
+      rawResponse: res,
+    });
+    
+    logger.info(`Auth callback response: ${JSON.stringify(callbackResponse)}`);
     
     // Get shop from session
     const session = res.locals?.shopify?.session;
     logger.info(`Auth successful for shop: ${session?.shop}`);
     
-    // Redirect to app with shop parameter
+    // Redirect to app with shop parameter and host
     const redirectUrl = `/?shop=${session.shop}&host=${req.query.host}`;
     logger.info(`Redirecting to: ${redirectUrl}`);
-    res.redirect(redirectUrl);
+    
+    // Use Shopify's redirect to ensure proper app bridge handling
+    await shopify.auth.redirectToShopifyOrAppRoot()(req, res, next);
   } catch (error) {
     logger.error("Auth callback error:", error);
     res.status(500).send("Authentication failed");
@@ -177,21 +183,29 @@ app.use("/*", async (req, res, next) => {
   req.query.shop = shop;  // Ensure shop is in query params
 
   // Check if we need to install
-  const appInstalled = await shopify.api.session.getCurrentId({
-    isOnline: true,
-    rawRequest: req,
-    rawResponse: res,
-  });
+  try {
+    const sessionId = await shopify.api.session.getCurrentId({
+      isOnline: true,
+      rawRequest: req,
+      rawResponse: res,
+    });
 
-  logger.info(`App installed status: ${appInstalled ? 'Yes' : 'No'}`);
+    const session = await shopify.config.sessionStorage.loadSession(sessionId);
+    logger.info(`Session found: ${!!session}, Session ID: ${sessionId}`);
 
-  if (!appInstalled) {
-    logger.info(`Redirecting to auth: ${shop}`);
+    if (!session) {
+      logger.info(`No session found, redirecting to auth: ${shop}`);
+      return shopify.auth.begin()(req, res, next);
+    }
+
+    // Add session to response locals for middleware
+    res.locals.shopify = { ...res.locals.shopify, session };
+    logger.info(`Session attached, serving app: ${shop}`);
+    return next();
+  } catch (error) {
+    logger.error(`Session error: ${error.message}`);
     return shopify.auth.begin()(req, res, next);
   }
-
-  logger.info(`Serving app: ${shop}`);
-  return next();
 }, async (req, res, _next) => {
   logger.info(`Serving frontend for: ${req.url}`);
   return res
