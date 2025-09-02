@@ -6,6 +6,7 @@ import shopify from "./shopify.js";
 import { logger } from "./utils/logger.js";
 import PrivacyWebhookHandlers from "./privacy.js";
 import ProductWebhookHandlers from "./webhooks/product.js";
+import ensureShopParam from "./middleware/ensureShopParam.js";
 
 const PORT = parseInt(process.env.BACKEND_PORT || process.env.PORT || "3000", 10);
 
@@ -39,6 +40,7 @@ app.post(
 
 // All endpoints after this point will require an active session
 app.use("/api/*", shopify.validateAuthenticatedSession());
+app.use(ensureShopParam);
 
 app.use(express.json());
 
