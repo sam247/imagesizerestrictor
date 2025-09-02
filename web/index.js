@@ -185,27 +185,18 @@ app.get("/api/auth", async (req, res, next) => {
   return shopify.auth.begin()(req, res, next);
 });
 
-app.get("/api/auth/callback", async (req, res) => {
+app.get("/api/auth/callback", async (req, res, next) => {
   try {
     logger.info(`Auth callback received: ${req.url}`);
-    const { shop } = req.query;
+    const { shop, host } = req.query;
+
+    logger.info(`Processing callback for shop: ${shop}, host: ${host}`);
 
     // Complete the OAuth process
-    const callbackResponse = await shopify.auth.callback({
+    await shopify.auth.callback({
       rawRequest: req,
       rawResponse: res,
-    });
-
-    logger.info(`Auth callback completed for ${shop}`, { callbackResponse });
-
-    // Perform post-authentication redirect
-    const redirectUrl = await shopify.auth.getEmbeddedAppUrl({
-      rawRequest: req,
-      rawResponse: res,
-    });
-
-    logger.info(`Redirecting to: ${redirectUrl}`);
-    res.redirect(redirectUrl);
+    })(req, res, next);
   } catch (error) {
     logger.error(`Auth callback error: ${error.message}`, { error });
     res.status(500).send("Failed to complete OAuth process");
@@ -230,55 +221,31 @@ app.use("/*", async (req, res, next) => {
 
   logger.info(`Processing request for shop: ${shop}, host: ${host}`);
 
-  // Check if we're on an auth-related path
-  if (req.url.match(/^\/api\/auth/)) {
-    logger.info(`Allowing auth path: ${req.url}`);
-    return next();
-  }
-
   try {
-    // First check for offline session
-    const offlineId = await shopify.api.session.getOfflineId(shop);
-    const offlineSession = await shopify.config.sessionStorage.loadSession(offlineId);
-
-    logger.info(`Offline session check: ${!!offlineSession}`);
-
-    // If no offline session, start OAuth
-    if (!offlineSession) {
-      logger.info(`No offline session, starting auth for: ${shop}`);
-      return shopify.auth.begin({
-        shop,
-        isOnline: false,
-        callbackPath: "/api/auth/callback",
-      })(req, res, next);
+    // Check if we're on an auth-related path
+    if (req.url.match(/^\/api\/auth/)) {
+      logger.info(`Allowing auth path: ${req.url}`);
+      return next();
     }
 
-    // Check for online session
-    const sessionId = await shopify.api.session.getCurrentId({
+    // Check if we have a session
+    const session = await shopify.api.session.getCurrentId({
       isOnline: true,
       rawRequest: req,
       rawResponse: res,
     });
 
-    logger.info(`Online session check: ${!!sessionId}`);
+    logger.info(`Session check: ${!!session}`);
 
-    if (!sessionId) {
-      logger.info(`No online session, starting auth for: ${shop}`);
-      return shopify.auth.begin({
-        shop,
-        isOnline: true,
-        callbackPath: "/api/auth/callback",
-      })(req, res, next);
-    }
-
-    const session = await shopify.config.sessionStorage.loadSession(sessionId);
     if (!session) {
-      logger.info(`Online session not found, starting auth for: ${shop}`);
+      logger.info(`No session, starting auth for: ${shop}`);
       return shopify.auth.begin({
         shop,
         isOnline: true,
         callbackPath: "/api/auth/callback",
-      })(req, res, next);
+        rawRequest: req,
+        rawResponse: res,
+      });
     }
 
     // We have a valid session
@@ -290,7 +257,9 @@ app.use("/*", async (req, res, next) => {
       shop,
       isOnline: true,
       callbackPath: "/api/auth/callback",
-    })(req, res, next);
+      rawRequest: req,
+      rawResponse: res,
+    });
   }
 }, async (req, res, _next) => {
   logger.info(`Serving frontend for: ${req.url}`);
