@@ -18,11 +18,20 @@ const app = express();
 
 // Set up Shopify authentication and webhook handling
 app.get(shopify.config.auth.path, shopify.auth.begin());
+
 app.get(
   shopify.config.auth.callbackPath,
   shopify.auth.callback(),
-  shopify.redirectToShopifyOrAppRoot()
+  (_req, res) => {
+    // Redirect to app with shop parameter
+    const shop = res.locals.shopify.session.shop;
+    const host = res.locals.shopify.session.host;
+    const redirectUrl = `/?shop=${shop}&host=${host}`;
+    logger.info(`Redirecting to: ${redirectUrl}`);
+    res.redirect(redirectUrl);
+  }
 );
+
 app.post(
   shopify.config.webhooks.path,
   shopify.processWebhooks({ webhookHandlers: { ...PrivacyWebhookHandlers, ...ProductWebhookHandlers } })
@@ -33,40 +42,38 @@ app.use("/api/*", shopify.validateAuthenticatedSession());
 
 app.use(express.json());
 
-// All endpoints after this point will have access to a request.body
-// attribute, as a result of the express.json() middleware
-app.use("/api/*", shopify.validateAuthenticatedSession());
-
-app.get("/api/products/count", async (req, res) => {
-  const countData = await shopify.api.rest.Product.count({
-    session: res.locals.shopify.session,
-  });
-  res.status(200).send(countData);
-});
-
-app.get("/api/products/create", async (req, res) => {
-  let status = 200;
-  let error = null;
-
+app.get("/api/products/count", async (_req, res) => {
   try {
-    await productCreator(res.locals.shopify.session);
-  } catch (e) {
-    console.log(`Failed to process products/create: ${e.message}`);
-    status = 500;
-    error = e.message;
+    const countData = await shopify.api.rest.Product.count({
+      session: res.locals.shopify.session,
+    });
+    res.status(200).json(countData);
+  } catch (error) {
+    logger.error(`Failed to get product count: ${error.message}`);
+    res.status(500).json({ error: error.message });
   }
-  res.status(status).send({ success: status === 200, error });
 });
 
 app.use(shopify.cspHeaders());
 app.use(serveStatic(STATIC_PATH, { index: false }));
 
-app.use("/*", shopify.ensureInstalledOnShop(), async (req, res, next) => {
-  logger.info(`Serving frontend for: ${req.url}`);
+app.use("/*", shopify.ensureInstalledOnShop(), async (req, res) => {
+  const shop = req.query.shop;
+  
+  if (!shop) {
+    logger.info(`No shop found in request: ${req.url}`);
+    return res.status(400).send("No shop provided");
+  }
+
+  logger.info(`Serving frontend for shop: ${shop}`);
   return res
     .status(200)
     .set("Content-Type", "text/html")
-    .send(readFileSync(join(STATIC_PATH, "index.html")));
+    .send(
+      readFileSync(join(STATIC_PATH, "index.html"))
+        .toString()
+        .replace(/%SHOPIFY_API_KEY%/g, process.env.SHOPIFY_API_KEY || "440a416d0f65d3a6379fd29fbfd1f459")
+    );
 });
 
 app.listen(PORT, () => {
