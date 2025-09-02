@@ -1,35 +1,37 @@
 import { useMemo } from "react";
 import { useLocation } from "react-router-dom";
-import { Provider } from "@shopify/app-bridge-react";
+import { createApp } from "@shopify/app-bridge";
+import { useAppBridge, useNavigate } from "@shopify/app-bridge-react";
+import { SHOPIFY_API_KEY } from "../config";
 import { Banner, Layout, Page } from "@shopify/polaris";
 
 /**
  * A component to configure App Bridge.
- * @desc A thin wrapper around AppBridge Provider that provides the following capabilities:
+ * @desc A thin wrapper around AppBridge that provides the following capabilities:
  *
  * 1. Ensures that navigating inside the app updates the host URL.
- * 2. Configures the App Bridge Provider
+ * 2. Configures the App Bridge connection
  */
 export function AppBridgeProvider({ children }) {
   const location = useLocation();
-  const urlParams = new URLSearchParams(location.search);
-
+  const navigate = useNavigate();
+  
   // The host may be present initially, but later removed by navigation.
-  // By caching this in a ref, we ensure that the host is available when the configured
-  // config object needs it.
+  const urlParams = new URLSearchParams(location.search);
   const host = urlParams.get("host");
-  const apiKey = process.env.SHOPIFY_API_KEY;
+  
+  // Initialize the app only once
+  const app = useMemo(() => {
+    if (!host || !process.env.SHOPIFY_API_KEY) return null;
+    
+    return createApp({
+      apiKey: process.env.SHOPIFY_API_KEY,
+      host: host,
+      forceRedirect: true
+    });
+  }, [host]);
 
-  const config = useMemo(
-    () => ({
-      host,
-      apiKey: apiKey,
-      forceRedirect: true,
-    }),
-    [host]
-  );
-
-  if (!apiKey || !host) {
+  if (!process.env.SHOPIFY_API_KEY || !host) {
     return (
       <Page narrowWidth>
         <Layout>
@@ -45,5 +47,5 @@ export function AppBridgeProvider({ children }) {
     );
   }
 
-  return <Provider config={config}>{children}</Provider>;
+  return children;
 }
