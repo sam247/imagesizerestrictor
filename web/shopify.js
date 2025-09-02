@@ -25,6 +25,7 @@ const shopify = shopifyApp({
     restResources,
     hostName: process.env.SHOPIFY_APP_URL?.replace(/https?:\/\//, '') || "imagesizerestrictor.onrender.com",
     hostScheme: "https",
+    isEmbeddedApp: true,
     future: {
       customerAddressDefaultFix: true,
       lineItemBilling: true,

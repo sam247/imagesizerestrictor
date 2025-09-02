@@ -154,17 +154,34 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use("/*", (req, res, next) => {
-  // Extract shop from query parameters if not already present
-  if (!req.query.shop && req.url.includes('shop=')) {
-    const shopMatch = req.url.match(/shop=([^&]+)/);
-    if (shopMatch) {
-      req.query.shop = decodeURIComponent(shopMatch[1]);
-      logger.info(`Extracted shop from URL: ${req.query.shop}`);
-    }
+// This route will handle both app installation and rendering
+app.use("/*", async (req, res, next) => {
+  const shop = req.query.shop || (req.url.match(/shop=([^&]+)/) || [])[1];
+  
+  if (!shop) {
+    logger.info(`No shop found in request: ${req.url}`);
+    return res.status(500).send("No shop provided");
   }
-  logger.info(`Pre-ensureInstalledOnShop: ${req.url}, Shop: ${req.query.shop}`);
-  return shopify.ensureInstalledOnShop()(req, res, next);
+
+  logger.info(`Processing request for shop: ${shop}`);
+  req.query.shop = shop;  // Ensure shop is in query params
+
+  // Check if we need to install
+  const appInstalled = await shopify.api.session.getCurrentId({
+    isOnline: true,
+    rawRequest: req,
+    rawResponse: res,
+  });
+
+  logger.info(`App installed status: ${appInstalled ? 'Yes' : 'No'}`);
+
+  if (!appInstalled) {
+    logger.info(`Redirecting to auth: ${shop}`);
+    return shopify.auth.begin()(req, res, next);
+  }
+
+  logger.info(`Serving app: ${shop}`);
+  return next();
 }, async (req, res, _next) => {
   logger.info(`Serving frontend for: ${req.url}`);
   return res
