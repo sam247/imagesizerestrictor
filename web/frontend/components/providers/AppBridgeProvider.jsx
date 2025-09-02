@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { createApp } from "@shopify/app-bridge";
 import { useAppBridge, useNavigate } from "@shopify/app-bridge-react";
-import { SHOPIFY_API_KEY } from "../config";
+import { SHOPIFY_API_KEY } from "../../utils/config";
 import { Banner, Layout, Page } from "@shopify/polaris";
 
 /**
@@ -22,16 +22,16 @@ export function AppBridgeProvider({ children }) {
   
   // Initialize the app only once
   const app = useMemo(() => {
-    if (!host || !process.env.SHOPIFY_API_KEY) return null;
+    if (!host || !SHOPIFY_API_KEY) return null;
     
     return createApp({
-      apiKey: process.env.SHOPIFY_API_KEY,
+      apiKey: SHOPIFY_API_KEY,
       host: host,
       forceRedirect: true
     });
   }, [host]);
 
-  if (!process.env.SHOPIFY_API_KEY || !host) {
+  if (!SHOPIFY_API_KEY || !host) {
     return (
       <Page narrowWidth>
         <Layout>
