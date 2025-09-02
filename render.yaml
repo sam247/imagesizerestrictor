@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: imagesizerestrictor
+    env: node
+    buildCommand: npm install && cd web/frontend && npm install && cd ../.. && npm run build
+    startCommand: cd web && npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SHOPIFY_API_KEY
+        sync: false
+      - key: SHOPIFY_API_SECRET
+        sync: false
+      - key: SCOPES
+        value: "write_products,write_files,read_files"
+      - key: HOST
+        value: "https://imagesizerestrictor.onrender.com"
