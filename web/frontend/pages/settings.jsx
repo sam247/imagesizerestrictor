@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Page,
   Layout,
@@ -11,6 +11,8 @@ import {
   Stack,
   Text,
   Toast,
+  RangeSlider,
+  ButtonGroup,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
 import { useAuthenticatedFetch } from "../hooks";
@@ -20,12 +22,22 @@ export default function SettingsPage() {
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState({
+    minSizeKB: 100,
     maxSizeMB: 2,
     maxDimension: 2048,
     minDimension: 800,
     compressionQuality: "high",
     autoOptimize: true,
+    sizePreset: "custom"
   });
+
+  const sizePresets = [
+    { label: "Small (max 500KB)", value: "small" },
+    { label: "Medium (max 1MB)", value: "medium" },
+    { label: "Large (max 2MB)", value: "large" },
+    { label: "Extra Large (max 5MB)", value: "xlarge" },
+    { label: "Custom", value: "custom" }
+  ];
 
   const qualityOptions = [
     { label: "Low (60%)", value: "low" },
@@ -34,7 +46,65 @@ export default function SettingsPage() {
     { label: "Maximum (100%)", value: "maximum" },
   ];
 
+  const handleSizePresetChange = useCallback((value) => {
+    setSettings(prev => {
+      const newSettings = { ...prev, sizePreset: value };
+      switch (value) {
+        case "small":
+          newSettings.minSizeKB = 50;
+          newSettings.maxSizeMB = 0.5;
+          break;
+        case "medium":
+          newSettings.minSizeKB = 100;
+          newSettings.maxSizeMB = 1;
+          break;
+        case "large":
+          newSettings.minSizeKB = 200;
+          newSettings.maxSizeMB = 2;
+          break;
+        case "xlarge":
+          newSettings.minSizeKB = 500;
+          newSettings.maxSizeMB = 5;
+          break;
+      }
+      return newSettings;
+    });
+  }, []);
+
+  // Load existing settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await fetch("/api/settings");
+        if (response.ok) {
+          const data = await response.json();
+          setSettings(prev => ({ ...prev, ...data }));
+        }
+      } catch (error) {
+        console.error("Failed to load settings:", error);
+      }
+    };
+    loadSettings();
+  }, [fetch]);
+
   const handleSubmit = useCallback(async () => {
+    // Validate settings
+    if (settings.minSizeKB >= settings.maxSizeMB * 1024) {
+      setToast({
+        content: "Minimum size must be less than maximum size",
+        error: true
+      });
+      return;
+    }
+
+    if (settings.minDimension >= settings.maxDimension) {
+      setToast({
+        content: "Minimum dimension must be less than maximum dimension",
+        error: true
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await fetch("/api/settings", {
@@ -70,21 +140,56 @@ export default function SettingsPage() {
       <TitleBar title="Settings" />
       <Layout>
         <Layout.AnnotatedSection
-          title="Image Size Restrictions"
-          description="Configure maximum and minimum image dimensions and file sizes."
+          title="File Size Limits"
+          description="Configure minimum and maximum file sizes for uploaded images."
         >
           <Card sectioned>
             <FormLayout>
-              <TextField
-                label="Maximum File Size (MB)"
-                type="number"
-                value={settings.maxSizeMB.toString()}
-                onChange={(value) =>
-                  setSettings({ ...settings, maxSizeMB: parseFloat(value) })
-                }
-                helpText="Maximum allowed file size in megabytes"
+              <Select
+                label="Size Preset"
+                options={sizePresets}
+                value={settings.sizePreset}
+                onChange={handleSizePresetChange}
+                helpText="Choose a preset or select 'Custom' for manual configuration"
               />
 
+              {settings.sizePreset === "custom" && (
+                <>
+                  <TextField
+                    label="Minimum File Size (KB)"
+                    type="number"
+                    value={settings.minSizeKB.toString()}
+                    onChange={(value) =>
+                      setSettings({ ...settings, minSizeKB: parseInt(value, 10) })
+                    }
+                    helpText="Minimum allowed file size in kilobytes (KB)"
+                  />
+
+                  <TextField
+                    label="Maximum File Size (MB)"
+                    type="number"
+                    value={settings.maxSizeMB.toString()}
+                    onChange={(value) =>
+                      setSettings({ ...settings, maxSizeMB: parseFloat(value) })
+                    }
+                    helpText="Maximum allowed file size in megabytes (MB)"
+                  />
+                </>
+              )}
+
+              <Banner status="info">
+                Current limits: {settings.minSizeKB}KB to {settings.maxSizeMB}MB
+              </Banner>
+            </FormLayout>
+          </Card>
+        </Layout.AnnotatedSection>
+
+        <Layout.AnnotatedSection
+          title="Image Dimensions"
+          description="Configure maximum and minimum image dimensions."
+        >
+          <Card sectioned>
+            <FormLayout>
               <TextField
                 label="Maximum Dimension (pixels)"
                 type="number"
@@ -104,7 +209,16 @@ export default function SettingsPage() {
                 }
                 helpText="Minimum required width or height in pixels"
               />
+            </FormLayout>
+          </Card>
+        </Layout.AnnotatedSection>
 
+        <Layout.AnnotatedSection
+          title="Optimization Settings"
+          description="Configure image optimization and compression settings."
+        >
+          <Card sectioned>
+            <FormLayout>
               <Select
                 label="Compression Quality"
                 options={qualityOptions}
@@ -115,21 +229,6 @@ export default function SettingsPage() {
                 helpText="JPEG compression quality (higher = better quality but larger file size)"
               />
 
-              <Stack distribution="trailing">
-                <Button primary loading={loading} onClick={handleSubmit}>
-                  Save Settings
-                </Button>
-              </Stack>
-            </FormLayout>
-          </Card>
-        </Layout.AnnotatedSection>
-
-        <Layout.AnnotatedSection
-          title="Optimization Settings"
-          description="Configure automatic image optimization settings."
-        >
-          <Card sectioned>
-            <FormLayout>
               <Select
                 label="Auto-Optimize Images"
                 options={[
@@ -145,6 +244,27 @@ export default function SettingsPage() {
             </FormLayout>
           </Card>
         </Layout.AnnotatedSection>
+
+        <Layout.Section>
+          <Stack distribution="trailing">
+            <ButtonGroup>
+              <Button onClick={() => setSettings({
+                minSizeKB: 100,
+                maxSizeMB: 2,
+                maxDimension: 2048,
+                minDimension: 800,
+                compressionQuality: "high",
+                autoOptimize: true,
+                sizePreset: "large"
+              })}>
+                Reset to Defaults
+              </Button>
+              <Button primary loading={loading} onClick={handleSubmit}>
+                Save Settings
+              </Button>
+            </ButtonGroup>
+          </Stack>
+        </Layout.Section>
       </Layout>
       {toast && (
         <Toast

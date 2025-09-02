@@ -12,7 +12,16 @@ export async function validateImage(imageUrl, session) {
     const buffer = Buffer.from(response.data);
     
     // Check file size
-    const sizeInMB = buffer.length / (1024 * 1024);
+    const sizeInKB = buffer.length / 1024;
+    const sizeInMB = sizeInKB / 1024;
+    
+    if (sizeInKB < settings.minSizeKB) {
+      return {
+        valid: false,
+        error: `Image size (${sizeInKB.toFixed(2)}KB) is below minimum allowed size of ${settings.minSizeKB}KB`
+      };
+    }
+    
     if (sizeInMB > settings.maxSizeMB) {
       return {
         valid: false,
