@@ -1,6 +1,6 @@
 import { BrowserRouter } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { NavMenu } from "@shopify/app-bridge-react";
+import { NavigationMenu } from "@shopify/app-bridge-react";
 import Routes from "./Routes";
 
 import { QueryProvider, PolarisProvider } from "./components";
@@ -19,8 +19,8 @@ export default function App() {
       <BrowserRouter>
         <AppBridgeProvider>
           <QueryProvider>
-            <NavMenu
-              navigation={[
+            <NavigationMenu
+              navigationLinks={[
                 {
                   label: 'Home',
                   destination: '/',
