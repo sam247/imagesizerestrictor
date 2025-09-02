@@ -22,4 +22,5 @@ RUN npm run build
 
 # Start the application
 WORKDIR /app/web
-CMD ["npm", "run", "start"]
+ENV NODE_ENV=production
+CMD ["npm", "start"]
