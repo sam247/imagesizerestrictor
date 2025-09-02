@@ -31,6 +31,16 @@ const shopify = shopifyApp({
     logger: {
       level: 0 // Enable all logging
     },
+    billing: undefined, // Disable billing
+  },
+  auth: {
+    path: "/api/auth",
+    callbackPath: "/api/auth/callback",
+    checkBilling: false,
+  },
+  webhooks: {
+    path: "/api/webhooks",
+  },
     future: {
       customerAddressDefaultFix: true,
       lineItemBilling: true,
