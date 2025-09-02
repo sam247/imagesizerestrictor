@@ -1,6 +1,8 @@
 import { BrowserRouter } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Routes from "./Routes";
+import { Frame } from "@shopify/polaris";
+import { AppNavigation } from "./components/Navigation";
 
 import { QueryProvider, PolarisProvider } from "./components";
 import { AppBridgeProvider } from "./components/providers/AppBridgeProvider";
@@ -17,7 +19,9 @@ export default function App() {
         <BrowserRouter>
           <AppBridgeProvider>
             <QueryProvider>
-              <Routes pages={pages} />
+              <Frame navigation={<AppNavigation />}>
+                <Routes pages={pages} />
+              </Frame>
             </QueryProvider>
           </AppBridgeProvider>
         </BrowserRouter>
