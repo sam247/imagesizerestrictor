@@ -52,23 +52,32 @@ app.get("/api/auth/callback", async (req, res, next) => {
   logger.info(`Auth callback: ${req.url}`);
   
   try {
-    const callbackResponse = await shopify.auth.callback({
+    const { shop } = req.query;
+    logger.info(`Processing callback for shop: ${shop}`);
+
+    // Complete the OAuth process
+    const session = await shopify.auth.callback({
       rawRequest: req,
       rawResponse: res,
     });
+
+    logger.info(`Auth callback session created: ${!!session}`);
+
+    // Check if we need to do online auth
+    const isOnlineAccessRequired = session.isOnline === false;
     
-    logger.info(`Auth callback response: ${JSON.stringify(callbackResponse)}`);
-    
-    // Get shop from session
-    const session = res.locals?.shopify?.session;
-    logger.info(`Auth successful for shop: ${session?.shop}`);
-    
-    // Redirect to app with shop parameter and host
-    const redirectUrl = `/?shop=${session.shop}&host=${req.query.host}`;
-    logger.info(`Redirecting to: ${redirectUrl}`);
-    
-    // Use Shopify's redirect to ensure proper app bridge handling
-    await shopify.auth.redirectToShopifyOrAppRoot()(req, res, next);
+    if (isOnlineAccessRequired) {
+      logger.info(`Starting online auth for: ${shop}`);
+      return shopify.auth.begin({
+        shop,
+        isOnline: true,
+        callbackPath: "/api/auth/callback",
+      })(req, res, next);
+    }
+
+    // We have online access, redirect to app
+    logger.info(`Auth complete, redirecting to app for: ${shop}`);
+    return shopify.auth.redirectToShopifyOrAppRoot()(req, res, next);
   } catch (error) {
     logger.error("Auth callback error:", error);
     res.status(500).send("Authentication failed");
@@ -180,9 +189,23 @@ app.use("/*", async (req, res, next) => {
   }
 
   logger.info(`Processing request for shop: ${shop}`);
-  req.query.shop = shop;  // Ensure shop is in query params
 
-  // Check if we need to install
+  // First try to get an offline session
+  const offlineId = await shopify.api.session.getOfflineId(shop);
+  const offlineSession = await shopify.config.sessionStorage.loadSession(offlineId);
+
+  logger.info(`Offline session found: ${!!offlineSession}`);
+
+  if (!offlineSession) {
+    logger.info(`No offline session, starting auth: ${shop}`);
+    return shopify.auth.begin({
+      shop,
+      isOnline: false,
+      callbackPath: "/api/auth/callback",
+    })(req, res, next);
+  }
+
+  // Try to get an online session
   try {
     const sessionId = await shopify.api.session.getCurrentId({
       isOnline: true,
@@ -190,21 +213,30 @@ app.use("/*", async (req, res, next) => {
       rawResponse: res,
     });
 
-    const session = await shopify.config.sessionStorage.loadSession(sessionId);
-    logger.info(`Session found: ${!!session}, Session ID: ${sessionId}`);
+    logger.info(`Online session ID: ${sessionId}`);
 
-    if (!session) {
-      logger.info(`No session found, redirecting to auth: ${shop}`);
-      return shopify.auth.begin()(req, res, next);
+    if (!sessionId) {
+      logger.info(`No online session, using offline session for: ${shop}`);
+      res.locals.shopify = { ...res.locals.shopify, session: offlineSession };
+      return next();
     }
 
-    // Add session to response locals for middleware
-    res.locals.shopify = { ...res.locals.shopify, session };
-    logger.info(`Session attached, serving app: ${shop}`);
+    const onlineSession = await shopify.config.sessionStorage.loadSession(sessionId);
+    
+    if (!onlineSession) {
+      logger.info(`Online session not found, using offline session for: ${shop}`);
+      res.locals.shopify = { ...res.locals.shopify, session: offlineSession };
+      return next();
+    }
+
+    logger.info(`Using online session for: ${shop}`);
+    res.locals.shopify = { ...res.locals.shopify, session: onlineSession };
     return next();
   } catch (error) {
     logger.error(`Session error: ${error.message}`);
-    return shopify.auth.begin()(req, res, next);
+    logger.info(`Falling back to offline session for: ${shop}`);
+    res.locals.shopify = { ...res.locals.shopify, session: offlineSession };
+    return next();
   }
 }, async (req, res, _next) => {
   logger.info(`Serving frontend for: ${req.url}`);
