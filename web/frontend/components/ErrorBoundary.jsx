@@ -1,6 +1,6 @@
 import React from 'react';
 import { Banner, Layout, Page } from "@shopify/polaris";
-import { logger } from '../utils/logger';
+import { logger } from '../utils/logger.js';
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {

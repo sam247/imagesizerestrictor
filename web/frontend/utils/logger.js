@@ -13,7 +13,6 @@ function formatMessage(level, message, meta = {}) {
     timestamp,
     level,
     message,
-    environment: process.env.NODE_ENV,
     ...meta,
   });
 }
