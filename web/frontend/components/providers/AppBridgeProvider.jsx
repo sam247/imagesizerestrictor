@@ -50,6 +50,15 @@ export function AppBridgeProvider({ children }) {
     }
   }
 
+  // Always show debug info in a banner
+  const debugInfo = {
+    apiKey: !!apiKey,
+    host: currentHost,
+    location: location.pathname + location.search,
+    env: process.env.NODE_ENV,
+    shopifyApiKey: window.SHOPIFY_API_KEY,
+  };
+
   if (!apiKey || !currentHost) {
     const message = !apiKey ? "Missing Shopify API key" : "Missing host parameter";
     return (
@@ -61,17 +70,29 @@ export function AppBridgeProvider({ children }) {
               status="critical"
             >
               <p>Your app is running without the required configuration. Check your environment variables and app setup.</p>
-              {process.env.NODE_ENV === 'development' && (
-                <pre>
-                  {JSON.stringify({ apiKey: !!apiKey, host: currentHost }, null, 2)}
-                </pre>
-              )}
+              <pre>
+                {JSON.stringify(debugInfo, null, 2)}
+              </pre>
             </Banner>
           </Layout.Section>
         </Layout>
       </Page>
     );
   }
+
+  // Show debug info even when configured
+  return (
+    <>
+      <Banner title="Debug Info" status="info">
+        <pre>
+          {JSON.stringify(debugInfo, null, 2)}
+        </pre>
+      </Banner>
+      <Provider config={config}>
+        {children}
+      </Provider>
+    </>
+  );
 
   return (
     <Provider config={config}>

@@ -1,8 +1,7 @@
 import { BrowserRouter } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Routes from "./Routes";
-import { Frame } from "@shopify/polaris";
-import { AppNavigation } from "./components/Navigation";
+import { Frame, Banner } from "@shopify/polaris";
 
 import { QueryProvider, PolarisProvider } from "./components";
 import { AppBridgeProvider } from "./components/providers/AppBridgeProvider";
@@ -19,7 +18,11 @@ export default function App() {
         <BrowserRouter>
           <AppBridgeProvider>
             <QueryProvider>
-              <Frame navigation={<AppNavigation />}>
+              <Frame>
+                <Banner status="info" title="App Loading State">
+                  <p>Current route: {window.location.pathname}</p>
+                  <p>Search params: {window.location.search}</p>
+                </Banner>
                 <Routes pages={pages} />
               </Frame>
             </QueryProvider>
