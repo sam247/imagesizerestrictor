@@ -27,11 +27,21 @@ const STATIC_PATH =
 const app = express();
 
 // Set up Shopify authentication and webhook handling
-app.get(shopify.config.auth.path, shopify.auth.begin());
+app.get(shopify.config.auth.path, (req, res, next) => {
+  logger.info(`Auth begin: ${req.url}`);
+  return shopify.auth.begin()(req, res, next);
+});
+
 app.get(
   shopify.config.auth.callbackPath,
-  shopify.auth.callback(),
-  shopify.redirectToShopifyOrAppRoot()
+  (req, res, next) => {
+    logger.info(`Auth callback: ${req.url}`);
+    return shopify.auth.callback()(req, res, next);
+  },
+  (req, res, next) => {
+    logger.info('Redirecting after auth');
+    return shopify.redirectToShopifyOrAppRoot()(req, res, next);
+  }
 );
 app.post(
   shopify.config.webhooks.path,
@@ -107,7 +117,15 @@ app.post("/api/products", async (_req, res) => {
   res.status(status).send({ success: status === 200, error });
 });
 
+// Add request ID middleware
+app.use((req, res, next) => {
+  req.id = crypto.randomUUID();
+  next();
+});
+
 app.use(shopify.cspHeaders());
+
+// Serve static files
 app.use(serveStatic(STATIC_PATH, { index: false }));
 
 // Add request ID middleware
@@ -116,7 +134,8 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use("/*", shopify.ensureInstalledOnShop(), async (_req, res, _next) => {
+app.use("/*", shopify.ensureInstalledOnShop(), async (req, res, _next) => {
+  logger.info(`Catch-all route hit: ${req.url}`);
   return res
     .status(200)
     .set("Content-Type", "text/html")

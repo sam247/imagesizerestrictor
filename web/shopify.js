@@ -20,8 +20,8 @@ const shopify = shopifyApp({
   api: {
     apiVersion: LATEST_API_VERSION,
     restResources,
-    hostName: process.env.SHOPIFY_APP_URL || "imagesizerestrictor.onrender.com",
-    hostScheme: process.env.SHOPIFY_APP_URL?.startsWith("https") ? "https" : "http",
+    hostName: process.env.SHOPIFY_APP_URL?.replace(/https?:\/\//, '') || "imagesizerestrictor.onrender.com",
+    hostScheme: "https",
     future: {
       customerAddressDefaultFix: true,
       lineItemBilling: true,
