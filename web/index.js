@@ -12,6 +12,7 @@ import PrivacyWebhookHandlers from "./privacy.js";
 import ProductWebhookHandlers from "./webhooks/product.js";
 import { imageValidationMiddleware } from "./middleware/imageValidation.js";
 import { getSettings, updateSettings } from "./settings-handler.js";
+import { getStats, updateStats } from "./stats-handler.js";
 
 const PORT = parseInt(
   process.env.BACKEND_PORT || process.env.PORT || "3000",
@@ -61,6 +62,16 @@ app.post("/api/settings", async (req, res) => {
   try {
     const settings = await updateSettings(res.locals.shopify.session, req.body);
     res.status(200).json(settings);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Stats endpoints
+app.get("/api/stats", async (_req, res) => {
+  try {
+    const stats = await getStats(res.locals.shopify.session);
+    res.status(200).json(stats);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

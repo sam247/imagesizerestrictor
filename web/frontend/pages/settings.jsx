@@ -6,23 +6,36 @@ import {
   FormLayout,
   TextField,
   Button,
+  Select,
   Banner,
+  Stack,
   Text,
-  Select
+  Toast,
 } from "@shopify/polaris";
+import { TitleBar } from "@shopify/app-bridge-react";
 import { useAuthenticatedFetch } from "../hooks";
 
 export default function SettingsPage() {
   const fetch = useAuthenticatedFetch();
+  const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState({
     maxSizeMB: 2,
     maxDimension: 2048,
-    minDimension: 200,
-    compressionQuality: 80
+    minDimension: 800,
+    compressionQuality: "high",
+    autoOptimize: true,
   });
-  const [status, setStatus] = useState({ type: "", message: "" });
+
+  const qualityOptions = [
+    { label: "Low (60%)", value: "low" },
+    { label: "Medium (75%)", value: "medium" },
+    { label: "High (85%)", value: "high" },
+    { label: "Maximum (100%)", value: "maximum" },
+  ];
 
   const handleSubmit = useCallback(async () => {
+    setLoading(true);
     try {
       const response = await fetch("/api/settings", {
         method: "POST",
@@ -33,40 +46,33 @@ export default function SettingsPage() {
       });
 
       if (response.ok) {
-        setStatus({
-          type: "success",
-          message: "Settings updated successfully",
+        setToast({
+          content: "Settings saved successfully",
+          error: false,
         });
       } else {
-        setStatus({
-          type: "error",
-          message: "Failed to update settings",
+        setToast({
+          content: "Failed to save settings",
+          error: true,
         });
       }
     } catch (error) {
-      setStatus({
-        type: "error",
-        message: `Error: ${error.message}`,
+      setToast({
+        content: `Error: ${error.message}`,
+        error: true,
       });
     }
+    setLoading(false);
   }, [settings, fetch]);
 
   return (
-    <Page title="Image Validation Settings">
+    <Page>
+      <TitleBar title="Settings" />
       <Layout>
-        {status.message && (
-          <Layout.Section>
-            <Banner
-              title={status.type === "success" ? "Success" : "Error"}
-              status={status.type}
-              onDismiss={() => setStatus({ type: "", message: "" })}
-            >
-              <p>{status.message}</p>
-            </Banner>
-          </Layout.Section>
-        )}
-
-        <Layout.Section>
+        <Layout.AnnotatedSection
+          title="Image Size Restrictions"
+          description="Configure maximum and minimum image dimensions and file sizes."
+        >
           <Card sectioned>
             <FormLayout>
               <TextField
@@ -101,44 +107,52 @@ export default function SettingsPage() {
 
               <Select
                 label="Compression Quality"
-                options={[
-                  {label: 'Low (60%)', value: '60'},
-                  {label: 'Medium (75%)', value: '75'},
-                  {label: 'High (85%)', value: '85'},
-                  {label: 'Maximum (100%)', value: '100'}
-                ]}
-                value={settings.compressionQuality.toString()}
+                options={qualityOptions}
+                value={settings.compressionQuality}
                 onChange={(value) =>
-                  setSettings({ ...settings, compressionQuality: parseInt(value, 10) })
+                  setSettings({ ...settings, compressionQuality: value })
                 }
                 helpText="JPEG compression quality (higher = better quality but larger file size)"
               />
 
-              <Button primary onClick={handleSubmit}>
-                Save Settings
-              </Button>
+              <Stack distribution="trailing">
+                <Button primary loading={loading} onClick={handleSubmit}>
+                  Save Settings
+                </Button>
+              </Stack>
             </FormLayout>
           </Card>
-        </Layout.Section>
+        </Layout.AnnotatedSection>
 
-        <Layout.Section secondary>
+        <Layout.AnnotatedSection
+          title="Optimization Settings"
+          description="Configure automatic image optimization settings."
+        >
           <Card sectioned>
-            <Text as="h2" variant="headingMd">
-              About Image Validation
-            </Text>
-            <Text as="p" variant="bodyMd">
-              These settings control how product images are validated when uploaded to your store.
-              Proper image optimization can improve your store's performance and SEO ranking.
-            </Text>
-            <br />
-            <Text as="p" variant="bodyMd">
-              • File size limits help reduce page load times<br />
-              • Dimension limits ensure consistent image quality<br />
-              • Compression quality balances size and visual quality
-            </Text>
+            <FormLayout>
+              <Select
+                label="Auto-Optimize Images"
+                options={[
+                  { label: "Yes", value: "true" },
+                  { label: "No", value: "false" },
+                ]}
+                value={settings.autoOptimize.toString()}
+                onChange={(value) =>
+                  setSettings({ ...settings, autoOptimize: value === "true" })
+                }
+                helpText="Automatically optimize images during upload"
+              />
+            </FormLayout>
           </Card>
-        </Layout.Section>
+        </Layout.AnnotatedSection>
       </Layout>
+      {toast && (
+        <Toast
+          content={toast.content}
+          error={toast.error}
+          onDismiss={() => setToast(null)}
+        />
+      )}
     </Page>
   );
 }

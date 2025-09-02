@@ -7,85 +7,98 @@ import {
   Stack,
   Link,
   Text,
+  LegacyCard,
+  DataTable,
+  Button,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
-import { useTranslation, Trans } from "react-i18next";
-
-import { trophyImage } from "../assets";
-
-import { ProductsCard } from "../components";
+import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import { useAppQuery } from "../hooks";
 
 export default function HomePage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  const {
+    data: stats,
+    isLoading: isLoadingStats,
+    isError: statsError
+  } = useAppQuery({
+    url: "/api/stats",
+  });
+
+  const rows = [
+    ['Total Images Processed', stats?.totalImages || '0'],
+    ['Images Rejected', stats?.rejectedImages || '0'],
+    ['Storage Saved', stats?.storageSaved || '0 MB'],
+    ['Average Image Size', stats?.averageSize || '0 MB'],
+  ];
+
   return (
-    <Page narrowWidth>
-      <TitleBar title={t("HomePage.title")} />
+    <Page>
+      <TitleBar title="Image Size Restrictor" primaryAction={null} />
       <Layout>
         <Layout.Section>
-          <Card sectioned>
-            <Stack
-              wrap={false}
-              spacing="extraTight"
-              distribution="trailing"
-              alignment="center"
-            >
-              <Stack.Item fill>
+          <Card>
+            <Card.Section>
+              <Stack distribution="equalSpacing" alignment="center">
                 <TextContainer spacing="loose">
-                  <Text as="h2" variant="headingMd">
-                    {t("HomePage.heading")}
+                  <Text variant="headingMd" as="h2">
+                    Image Size Management
                   </Text>
                   <p>
-                    <Trans
-                      i18nKey="HomePage.yourAppIsReadyToExplore"
-                      components={{
-                        PolarisLink: (
-                          <Link url="https://polaris.shopify.com/" external />
-                        ),
-                        AdminApiLink: (
-                          <Link
-                            url="https://shopify.dev/api/admin-graphql"
-                            external
-                          />
-                        ),
-                        AppBridgeLink: (
-                          <Link
-                            url="https://shopify.dev/apps/tools/app-bridge"
-                            external
-                          />
-                        ),
-                      }}
-                    />
-                  </p>
-                  <p>{t("HomePage.startPopulatingYourApp")}</p>
-                  <p>
-                    <Trans
-                      i18nKey="HomePage.learnMore"
-                      components={{
-                        ShopifyTutorialLink: (
-                          <Link
-                            url="https://shopify.dev/apps/getting-started/add-functionality"
-                            external
-                          />
-                        ),
-                      }}
-                    />
+                    Control and optimize your store's image sizes to improve performance and SEO.
                   </p>
                 </TextContainer>
-              </Stack.Item>
-              <Stack.Item>
-                <div style={{ padding: "0 20px" }}>
-                  <Image
-                    source={trophyImage}
-                    alt={t("HomePage.trophyAltText")}
-                    width={120}
-                  />
-                </div>
-              </Stack.Item>
-            </Stack>
+                <Button primary onClick={() => navigate("/settings")}>
+                  Configure Settings
+                </Button>
+              </Stack>
+            </Card.Section>
           </Card>
         </Layout.Section>
+
         <Layout.Section>
-          <ProductsCard />
+          <LegacyCard title="Statistics">
+            <DataTable
+              columnContentTypes={[
+                'text',
+                'text',
+              ]}
+              headings={[
+                'Metric',
+                'Value',
+              ]}
+              rows={rows}
+              loading={isLoadingStats}
+            />
+          </LegacyCard>
+        </Layout.Section>
+
+        <Layout.Section secondary>
+          <Card title="Quick Tips">
+            <Card.Section>
+              <TextContainer spacing="loose">
+                <Text as="h3" variant="headingSm">
+                  Recommended Image Sizes
+                </Text>
+                <ul>
+                  <li>Product Images: Max 2048px, Min 800px</li>
+                  <li>Thumbnails: Max 800px, Min 400px</li>
+                  <li>Banners: Max 2048px, Min 1200px</li>
+                </ul>
+                <Text as="h3" variant="headingSm">
+                  Best Practices
+                </Text>
+                <ul>
+                  <li>Use JPG for photos</li>
+                  <li>Use PNG for logos and icons</li>
+                  <li>Keep file sizes under 2MB</li>
+                </ul>
+              </TextContainer>
+            </Card.Section>
+          </Card>
         </Layout.Section>
       </Layout>
     </Page>
