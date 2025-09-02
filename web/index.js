@@ -34,30 +34,40 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 
 // Set up Shopify authentication and webhook handling
-app.get(shopify.config.auth.path, (req, res, next) => {
+// Auth endpoints
+app.get("/api/auth", async (req, res, next) => {
   logger.info(`Auth begin: ${req.url}`);
+  
+  if (!req.query.shop) {
+    logger.error("No shop provided for auth");
+    res.status(400).send("No shop provided");
+    return;
+  }
+
+  logger.info(`Starting auth for shop: ${req.query.shop}`);
   return shopify.auth.begin()(req, res, next);
 });
 
-app.get(
-  shopify.config.auth.callbackPath,
-  (req, res, next) => {
-    logger.info(`Auth callback: ${req.url}`);
-    // Ensure shop parameter is available
-    if (!req.query.shop && req.url.includes('shop=')) {
-      const shopMatch = req.url.match(/shop=([^&]+)/);
-      if (shopMatch) {
-        req.query.shop = decodeURIComponent(shopMatch[1]);
-        logger.info(`Extracted shop in callback: ${req.query.shop}`);
-      }
-    }
-    return shopify.auth.callback()(req, res, next);
-  },
-  (req, res, next) => {
-    logger.info('Redirecting after auth');
-    return shopify.redirectToShopifyOrAppRoot()(req, res, next);
+app.get("/api/auth/callback", async (req, res, next) => {
+  logger.info(`Auth callback: ${req.url}`);
+  
+  try {
+    // Complete auth process
+    await shopify.auth.callback()(req, res, next);
+    
+    // Get shop from session
+    const session = res.locals?.shopify?.session;
+    logger.info(`Auth successful for shop: ${session?.shop}`);
+    
+    // Redirect to app with shop parameter
+    const redirectUrl = `/?shop=${session.shop}&host=${req.query.host}`;
+    logger.info(`Redirecting to: ${redirectUrl}`);
+    res.redirect(redirectUrl);
+  } catch (error) {
+    logger.error("Auth callback error:", error);
+    res.status(500).send("Authentication failed");
   }
-);
+});
 app.post(
   shopify.config.webhooks.path,
   shopify.processWebhooks({ webhookHandlers: { ...PrivacyWebhookHandlers, ...ProductWebhookHandlers } })

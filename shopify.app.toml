@@ -17,14 +17,13 @@ api_version = "2025-07"
 scopes = "write_products,write_files,read_files"
 
 [auth]
-redirect_urls = [ 
-  "https://imagesizerestrictor.onrender.com/api/auth",
-  "https://imagesizerestrictor.onrender.com/api/auth/callback"
-]
+redirect_urls = [ "https://imagesizerestrictor.onrender.com/api/auth/callback" ]
 
 [web]
-auth_callback_path = "/api/auth"
+auth_callback_path = "/api/auth/callback"
+auth_path = "/api/auth"
 enable_new_app_embed = true
+embedded = true
 
 [pos]
 embedded = false
