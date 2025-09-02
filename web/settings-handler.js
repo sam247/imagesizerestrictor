@@ -1,10 +1,13 @@
-import { Shopify } from "@shopify/shopify-api";
+import shopify from "./shopify.js";
 
 const METAFIELD_NAMESPACE = "image_validator";
 const METAFIELD_KEY = "settings";
 
 export async function getSettings(session) {
-  const client = new Shopify.Clients.Rest(session.shop, session.accessToken);
+  const client = new shopify.api.clients.Rest({
+    session,
+    apiVersion: shopify.api.LATEST_API_VERSION
+  });
   
   try {
     const response = await client.get({
@@ -37,7 +40,10 @@ export async function getSettings(session) {
 }
 
 export async function updateSettings(session, settings) {
-  const client = new Shopify.Clients.Rest(session.shop, session.accessToken);
+  const client = new shopify.api.clients.Rest({
+    session,
+    apiVersion: shopify.api.LATEST_API_VERSION
+  });
   
   try {
     await client.post({
