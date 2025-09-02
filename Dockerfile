@@ -18,9 +18,9 @@ COPY web/package*.json ./web/
 COPY web/frontend/package*.json ./web/frontend/
 
 # Install dependencies
-RUN npm install --no-audit
-RUN cd web && npm install --no-audit
-RUN cd web/frontend && npm install --no-audit
+RUN npm ci --no-audit
+RUN cd web && npm ci --no-audit
+RUN cd web/frontend && npm ci --no-audit
 
 # Copy the rest of the application
 COPY . .

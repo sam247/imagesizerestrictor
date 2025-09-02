@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { AppBridgeProvider as ShopifyBridgeProvider } from "@shopify/app-bridge-react";
+import { createApp } from "@shopify/app-bridge";
+import { Provider } from "@shopify/app-bridge-react";
 import { Banner, Layout, Page } from "@shopify/polaris";
 import { logger } from "../../utils/logger.js";
 
@@ -69,8 +70,8 @@ export function AppBridgeProvider({ children }) {
   }
 
   return (
-    <ShopifyBridgeProvider config={config}>
+    <Provider config={config}>
       {children}
-    </ShopifyBridgeProvider>
+    </Provider>
   );
 }
