@@ -24,7 +24,8 @@ export function AppBridgeProvider({ children }) {
     return {
       apiKey: SHOPIFY_API_KEY,
       host: host,
-      forceRedirect: true
+      forceRedirect: true,
+      isEmbeddedApp: true
     };
   }, [host]);
 
