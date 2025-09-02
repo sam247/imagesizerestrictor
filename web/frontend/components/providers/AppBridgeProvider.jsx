@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { createApp } from "@shopify/app-bridge";
-import { useAppBridge, useNavigate } from "@shopify/app-bridge-react";
-import { SHOPIFY_API_KEY } from "../../utils/config";
+import { useAppBridge } from "@shopify/app-bridge-react";
 import { Banner, Layout, Page } from "@shopify/polaris";
+import { SHOPIFY_API_KEY } from "../../utils/config";
 
 /**
  * A component to configure App Bridge.
@@ -14,21 +14,18 @@ import { Banner, Layout, Page } from "@shopify/polaris";
  */
 export function AppBridgeProvider({ children }) {
   const location = useLocation();
-  const navigate = useNavigate();
   
   // The host may be present initially, but later removed by navigation.
   const urlParams = new URLSearchParams(location.search);
   const host = urlParams.get("host");
-  
-  // Initialize the app only once
-  const app = useMemo(() => {
-    if (!host || !SHOPIFY_API_KEY) return null;
-    
-    return createApp({
+
+  // Create the app config
+  const config = useMemo(() => {
+    return {
       apiKey: SHOPIFY_API_KEY,
       host: host,
       forceRedirect: true
-    });
+    };
   }, [host]);
 
   if (!SHOPIFY_API_KEY || !host) {
@@ -46,6 +43,11 @@ export function AppBridgeProvider({ children }) {
       </Page>
     );
   }
+
+  // Create the app instance
+  const app = useMemo(() => {
+    return createApp(config);
+  }, [config]);
 
   return children;
 }

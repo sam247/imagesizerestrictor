@@ -16,6 +16,9 @@ if (
 
 process.env.VITE_SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY;
 
+// Ensure environment variables are available during build
+process.env.SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY || process.env.VITE_SHOPIFY_API_KEY;
+
 const proxyOptions = {
   target: `http://127.0.0.1:${process.env.BACKEND_PORT}`,
   changeOrigin: false,
