@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { Provider } from "@shopify/app-bridge-react";
+import { useAppBridge } from "@shopify/app-bridge-react";
 import { Banner, Layout, Page } from "@shopify/polaris";
 
 export function AppBridgeProvider({ children }) {
