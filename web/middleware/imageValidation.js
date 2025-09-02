@@ -1,7 +1,6 @@
-import { Shopify } from "@shopify/shopify-api";
+import shopify from "../shopify.js";
 import sharp from "sharp";
 import axios from "axios";
-
 import { getSettings } from "../settings-handler.js";
 
 export async function validateImage(imageUrl, session) {
@@ -48,7 +47,10 @@ export async function validateImage(imageUrl, session) {
 
 export async function imageValidationMiddleware(req, res, next) {
   const session = res.locals.shopify.session;
-  const client = new Shopify.Clients.Rest(session.shop, session.accessToken);
+  const client = new shopify.api.clients.Rest({
+    session,
+    apiVersion: shopify.api.LATEST_API_VERSION
+  });
 
   // Only process POST/PUT requests to products
   if (!['POST', 'PUT'].includes(req.method) || !req.path.includes('/products')) {
@@ -60,7 +62,7 @@ export async function imageValidationMiddleware(req, res, next) {
     if (body.product && body.product.images) {
       for (const image of body.product.images) {
         if (image.src) {
-          const validationResult = await validateImage(image.src);
+          const validationResult = await validateImage(image.src, session);
           if (!validationResult.valid) {
             return res.status(400).json({
               error: validationResult.error
