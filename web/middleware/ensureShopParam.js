@@ -33,6 +33,21 @@ export default function ensureShopParam(req, res, next) {
     }
   }
 
+  // Try redirectUri param from exitiframe
+  if (!shop && req.query.redirectUri) {
+    try {
+      const uri = decodeURIComponent(req.query.redirectUri);
+      const m = uri.match(/shop=([^&]+)/);
+      if (m) {
+        const redirect = `/api/auth?shop=${m[1]}`;
+        logger.info(`ensureShopParam redirect using redirectUri to ${redirect}`);
+        return res.redirect(302, redirect);
+      }
+    } catch (err) {
+      logger.error(`Failed to parse redirectUri: ${err.message}`);
+    }
+  }
+
   // Shopify sends X-Shopify-Shop-Domain on the first load inside admin
   const shopHeader = req.get('x-shopify-shop-domain');
   if (shopHeader) {
