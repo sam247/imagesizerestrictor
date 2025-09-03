@@ -40,6 +40,8 @@ app.post(
 
 // All endpoints after this point will require an active session
 app.use("/api/*", shopify.validateAuthenticatedSession());
+
+// ensure ?shop= for first load; skipped when session already present
 app.use(ensureShopParam);
 
 app.use(express.json());

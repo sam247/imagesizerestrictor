@@ -2,6 +2,9 @@
 import { logger } from "../utils/logger.js";
 
 export default function ensureShopParam(req, res, next) {
+  // Skip if session already exists (in-app navigation)
+  if (res.locals?.shopify?.session) return next();
+
   // skip API and static paths
   if (req.url.startsWith('/api') || req.url.startsWith('/static')) {
     return next();
